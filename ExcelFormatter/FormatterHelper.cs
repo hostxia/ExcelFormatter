@@ -55,29 +55,48 @@ namespace ExcelFormatter
             var sClientCodePattern = @"(?<=(\(|（))[0-9]{4}(?=(\)|）))";
             foreach (DataRow drData in dtExcelData.Rows)
             {
-                var mathces = Regex.Matches(drData["描述"].ToString(), sClientCodePattern);
-                var bIsRightDemand = false;
-                foreach (var sValue in mathces.Cast<Match>().Select(m => m.Value).Distinct())
-                {
-                    if (sValue != drData["客户编号"].ToString())
-                    {
-                        var drCopyRow = dtFormatData.Rows.Add(drData.ItemArray);
-                        drCopyRow["是否联合要求"] = "Y";
-                        drCopyRow["申请人编号"] = sValue;
-                        bIsRightDemand = true;
-                    }
-                }
-                if (bIsRightDemand)
+                if (drData["客户编号"].ToString() == drData["申请人编号"].ToString())
                 {
                     dtFormatData.Rows.Cast<DataRow>().First(r => r.ItemArray.SequenceEqual(drData.ItemArray)).Delete();
                     dtFormatData.AcceptChanges();
+                    var drCopyRow = dtFormatData.Rows.Add(drData.ItemArray);
+                    drCopyRow["申请人编号"] = "";
+                    var drCopyRow1 = dtFormatData.Rows.Add(drData.ItemArray);
+                    drCopyRow1["客户编号"] = "";
                 }
-                //var mathces1 = Regex.Matches(drData["备注"].ToString(), sClientCodePattern);
-                //foreach (Match match in mathces1)
-                //{
-                //    if (match.Value != drData["客户编号"].ToString())
-                //        drData["联合要求"] = "Y";
-                //}
+                else
+                {
+                    var mathces = Regex.Matches(drData["描述"].ToString(), sClientCodePattern);
+                    var bIsUnionDemand = false;
+                    foreach (var sValue in mathces.Cast<Match>().Select(m => m.Value).Distinct())
+                    {
+                        if (!string.IsNullOrWhiteSpace(drData["客户编号"].ToString()))
+                        {
+                            if (sValue != drData["客户编号"].ToString())
+                            {
+                                var drCopyRow = dtFormatData.Rows.Add(drData.ItemArray);
+                                drCopyRow["是否联合要求"] = "Y";
+                                drCopyRow["申请人编号"] = sValue;
+                                bIsUnionDemand = true;
+                            }
+                        }
+                        else if (!string.IsNullOrWhiteSpace(drData["申请人编号"].ToString()))
+                        {
+                            if (sValue != drData["申请人编号"].ToString())
+                            {
+                                var drCopyRow = dtFormatData.Rows.Add(drData.ItemArray);
+                                drCopyRow["是否联合要求"] = "Y";
+                                drCopyRow["客户编号"] = sValue;
+                                bIsUnionDemand = true;
+                            }
+                        }
+                    }
+                    if (bIsUnionDemand)
+                    {
+                        dtFormatData.Rows.Cast<DataRow>().First(r => r.ItemArray.SequenceEqual(drData.ItemArray)).Delete();
+                        dtFormatData.AcceptChanges();
+                    }
+                }
             }
             return dtFormatData;
         }
