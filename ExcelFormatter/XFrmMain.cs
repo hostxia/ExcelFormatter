@@ -99,6 +99,9 @@ namespace ExcelFormatter
                 case "C":
                     xgcResult.DataSource = FormatterHelper.GetCaseType(_dtExcelData);
                     break;
+                case "D":
+                    xgcResult.DataSource = FormatterHelper.MergeInventorInfo(_dtExcelData);
+                    break;
                 default:
                     break;
             }

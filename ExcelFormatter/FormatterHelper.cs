@@ -16,7 +16,8 @@ namespace ExcelFormatter
         {
             new KeyValuePair<string, string>("A", "1. 将客户要求中的联合要求拆分为多条"),
             new KeyValuePair<string, string>("B", "2. 将实体表中包含多个实体的数据拆分为多条"),
-            new KeyValuePair<string, string>("C", "3. 从卷号中拆分出案件类型代码")
+            new KeyValuePair<string, string>("C", "3. 从卷号中拆分出案件类型代码"),
+            new KeyValuePair<string, string>("D", "4. 将多条同一案件的发明人信息合并为一条")
         };
 
         public static void LoadExcel(string sFilePath, int nIndex, ref List<string> listSheetsName, ref DataTable dtExcelData)
@@ -129,6 +130,11 @@ namespace ExcelFormatter
             return dtFormatData;
         }
 
+        /// <summary>
+        /// 提取卷号中的类型代码
+        /// </summary>
+        /// <param name="dtExcelData"></param>
+        /// <returns></returns>
         public static DataTable GetCaseType(DataTable dtExcelData)
         {
             var dtFormatData = dtExcelData.Copy();
@@ -139,6 +145,33 @@ namespace ExcelFormatter
                 var match = Regex.Match(dataRow["卷号"].ToString(), sCaseNoPattern);
                 if (match.Success)
                     dataRow["类型"] = match.Value;
+            }
+            return dtFormatData;
+        }
+
+        /// <summary>
+        /// 将多条同一案件的发明人信息合并为一条
+        /// </summary>
+        /// <param name="dtExcelData"></param>
+        /// <returns></returns>
+        public static DataTable MergeInventorInfo(DataTable dtExcelData)
+        {
+            var dtFormatData = dtExcelData.Copy();
+            foreach (var groupInfo in dtExcelData.Rows.Cast<DataRow>().GroupBy(d => d["我方卷号"]).Where(g => g.Count() > 1))
+            {
+                foreach (var dataRow in dtFormatData.Select($"我方卷号 = '{groupInfo.Key}'"))
+                {
+                    dataRow.Delete();
+                }
+                var newRow = dtFormatData.NewRow();
+                for (var i = 0; i < newRow.ItemArray.Length; i++)
+                {
+                    var listValue =
+                        groupInfo.ToList().OrderBy(g => g["PID"]).Select(d => d.ItemArray[i].ToString()).ToList();
+                    newRow[i] = string.Join(";", listValue);
+                }
+                newRow["我方卷号"] = groupInfo.Key;
+                dtFormatData.Rows.Add(newRow);
             }
             return dtFormatData;
         }
